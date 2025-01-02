@@ -1,6 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from main import Paper, filter_papers_by_author, filter_papers_by_topic, sort_papers_by_score
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from AI_paper_collection_assistant.main import Paper, filter_papers_by_author, filter_papers_by_topic, sort_papers_by_score, format_output
 
 @pytest.fixture
 def sample_papers():
