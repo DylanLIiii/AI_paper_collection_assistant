@@ -190,3 +190,4 @@ yarl==1.18.3
 youtube-transcript-api==0.6.3
 zipp==3.21.0
 python-markdown-math
+taipy
