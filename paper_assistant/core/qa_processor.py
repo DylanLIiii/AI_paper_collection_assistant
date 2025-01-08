@@ -13,6 +13,18 @@ class QaResult(BaseModel):
     answer: str
 
 class QaProcessor:
+    # Define standard columns for the table
+    STANDARD_COLUMNS = [
+        "arxiv_id",
+        "title",
+        "abstract",
+        "key_contributions",
+        "methodology",
+        "results",
+        "limitations",
+        "practical_applications"
+    ]
+    
     def __init__(self, api_key=None):
         # Load config
         self.config = configparser.ConfigParser()
@@ -34,6 +46,61 @@ class QaProcessor:
 
 
         self.cache_handler = CacheHandler("out/qa_cache")
+
+    def generate_table_row(self, paper: Paper) -> Dict[str, str]:
+        """Generate a table row for a single paper"""
+        # Get basic info
+        row = {
+            "arxiv_id": paper.arxiv_id,
+            "title": paper.title,
+            "abstract": paper.abstract
+        }
+        
+        # Get PDF content
+        text_content = paper.pdf_content
+        if not text_content:
+            text_content = paper.abstract
+
+        # Generate additional columns using LLM
+        for column in self.STANDARD_COLUMNS[3:]:  # Skip first 3 standard columns
+            prompt = f"""Paper Content:
+{text_content[:50000]}
+
+Extract the {column.replace('_', ' ')} from this paper. 
+- Be concise but informative
+- Use bullet points when appropriate
+- Focus on key information
+"""
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.config["SELECTION"]["model"],
+                    response_model=QaResult,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_retries=3,
+                    timeout=30,
+                )
+                row[column] = response.answer
+            except Exception as e:
+                row[column] = f"Error: {str(e)}"
+        
+        return row
+
+    def generate_paper_table(self, arxiv_ids: List[str], papers: Dict[str, Paper]) -> str:
+        """Generate a markdown table from multiple papers"""
+        # Generate table header
+        table = "| " + " | ".join(self.STANDARD_COLUMNS) + " |\n"
+        table += "|" + "|".join(["---"] * len(self.STANDARD_COLUMNS)) + "|\n"
+        
+        # Generate rows
+        for arxiv_id in arxiv_ids:
+            if arxiv_id in papers:
+                row = self.generate_table_row(papers[arxiv_id])
+                table += "| " + " | ".join(
+                    str(row.get(col, "")).replace("\n", "<br>") 
+                    for col in self.STANDARD_COLUMNS
+                ) + " |\n"
+        
+        return table
 
     def process_qa(self, paper: Paper, progress_callback=None) -> Dict[str, str]:
         """Process Q&A for a paper with caching"""

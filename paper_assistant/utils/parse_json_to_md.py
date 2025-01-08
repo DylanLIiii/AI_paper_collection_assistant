@@ -43,7 +43,7 @@ def render_title_and_author(paper_entry: dict, idx: int) -> str:
     return paper_string
 
 
-def render_md_string(papers: dict) -> str:
+def render_md_string(papers: dict, table: Optional[str] = None) -> str:
     today = datetime.now().strftime("%m/%d/%Y")
     md_string = f"# Personalized Daily Arxiv Papers {today}\n"
     md_string += f"Total relevant papers: {len(papers)}\n\n"
@@ -55,7 +55,13 @@ def render_md_string(papers: dict) -> str:
         md_string += f"{i}. [{paper.title}](#paper{i})\n"
         md_string += f"**Authors:** {', '.join(paper.authors)}\n\n"
 
-    md_string += "---\n"
+    # Add table if provided
+    if table:
+        md_string += "\n## Summary Table\n"
+        md_string += table
+        md_string += "\n---\n"
+    else:
+        md_string += "---\n"
 
     def reg_abstract(abstract: str) -> str:
         return re.sub(
