@@ -1,0 +1,2 @@
+- Use loguru for logging. Do not use print statements.
+- Use TypeHinting for all variables and functions.

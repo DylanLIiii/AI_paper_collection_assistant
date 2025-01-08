@@ -1,21 +1,32 @@
 from datetime import datetime
 from loguru import logger
+from typing import List, Optional, Dict, Any
 
 
 class Paper:
+    """Base class for all paper types with common functionality."""
+    
     def __init__(self, **kwargs):
         """
-        Dynamically assign attributes from JSON data.
-        Update update_date based on the latest version's created date.
+        Initialize a paper with dynamic attributes.
+        Common attributes include: id/arxiv_id, title, abstract, authors, url
         """
+        # Dynamically assign all attributes
         for key, value in kwargs.items():
-            setattr(self, key, value)  # 动态设置属性
-
-        # Update update_date if versions exist
+            setattr(self, key, value)
+        
+        # Ensure basic attributes exist
+        self.id = getattr(self, 'id', None) or getattr(self, 'arxiv_id', None)
+        self.title = getattr(self, 'title', None)
+        self.abstract = getattr(self, 'abstract', None)
+        self.authors = getattr(self, 'authors', [])
+        self.url = getattr(self, 'url', None)
+        
+        # Update date handling
         if hasattr(self, "versions") and self.versions:
             self.update_date = self._get_latest_version_date()
 
-    def _get_latest_version_date(self) -> datetime:
+    def _get_latest_version_date(self) -> Optional[datetime]:
         """
         Get the date of the latest version of the paper.
 
@@ -32,7 +43,7 @@ class Paper:
             if isinstance(latest, dict) and "created" in latest:
                 date_str = latest["created"]
                 try:
-                    # First try the GMT format, sometimes that update version do not use GMT format, I do not know why
+                    # First try the GMT format
                     return datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %Z")
                 except ValueError:
                     # If that fails, try the year-month-day format
@@ -41,27 +52,31 @@ class Paper:
             logger.error(f"Failed to parse date for paper {self.id}. Error: {e}")
             return None
 
-    def __repr__(self):
-        """
-        Return a readable string representation of the object as key-value pairs.
-        """
+    def __repr__(self) -> str:
+        """Return a readable string representation of the object."""
         attrs = {
             key: getattr(self, key, None)
-            for key in ["id", "title", "categories", "update_date"]
+            for key in ["id", "title", "authors", "update_date"]
+            if hasattr(self, key)
         }
         return f"Paper({', '.join(f'{k}={v}' for k, v in attrs.items())})"
 
-    def is_category(self, category):
-        """
-        Check if the paper belongs to a specific category.
-        """
+    def __hash__(self) -> int:
+        """Hash based on paper ID."""
+        return hash(self.id)
+
+    def __eq__(self, other) -> bool:
+        """Equality based on paper ID."""
+        if not isinstance(other, Paper):
+            return False
+        return self.id == other.id
+
+    def is_category(self, category: str) -> bool:
+        """Check if the paper belongs to a specific category."""
         return getattr(self, "categories", None) == category
 
-    def to_dict(self):
-        """
-        Convert the Paper object to a dictionary.
-        Handles datetime serialization by converting to ISO format string.
-        """
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the Paper object to a dictionary."""
         result = {}
         for key, value in self.__dict__.items():
             if isinstance(value, datetime):
@@ -75,14 +90,11 @@ class Paper:
         Check if the paper was updated after a given date.
 
         Args:
-            date_str: Date string in 'YYYY-MM-DD' format or datetime object
+            compare_date: datetime object to compare against
 
         Returns:
             bool: True if paper was updated after the given date
         """
         if not hasattr(self, "update_date"):
             return False
-
-        paper_date = self.update_date
-
-        return paper_date >= compare_date
+        return self.update_date >= compare_date

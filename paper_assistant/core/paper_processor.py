@@ -2,7 +2,7 @@ from typing import Dict, List, Set, Tuple
 from configparser import ConfigParser
 from instructor import Instructor
 
-from paper_assistant.core.arxiv_scraper import Paper, get_papers_from_arxiv_rss_api
+from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper, get_papers_from_arxiv_rss_api
 from paper_assistant.utils.filter_papers import filter_by_author, filter_by_gpt
 from paper_assistant.utils.helpers import argsort
 

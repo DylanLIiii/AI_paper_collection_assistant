@@ -10,7 +10,7 @@ from typing import List, TypeVar
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-from paper_assistant.core.arxiv_scraper import Paper
+from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper
 
 T = TypeVar("T")
 

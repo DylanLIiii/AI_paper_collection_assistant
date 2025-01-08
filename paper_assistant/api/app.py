@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import json
 from datetime import datetime
-from paper_assistant.core.arxiv_scraper import Paper
+from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper
 import os
 from paper_assistant.core.qa_processor import QaProcessor
 from paper_assistant.utils.markdown_processor import MarkdownProcessor

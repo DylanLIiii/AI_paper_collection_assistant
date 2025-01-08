@@ -8,7 +8,7 @@ import instructor
 from litellm import completion
 from pydantic import BaseModel, Field
 
-from paper_assistant.core.arxiv_scraper import Paper
+from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper
 from paper_assistant.core.arxiv_scraper import EnhancedJSONEncoder
 import os
 

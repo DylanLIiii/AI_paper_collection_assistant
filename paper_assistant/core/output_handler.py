@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from configparser import ConfigParser
 
-from paper_assistant.core.arxiv_scraper import Paper, EnhancedJSONEncoder
+from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper, EnhancedJSONEncoder
 from paper_assistant.utils.parse_json_to_md import render_md_string
 from paper_assistant.utils.push_to_slack import push_to_slack
 
