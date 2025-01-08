@@ -189,3 +189,38 @@ Extract the {column.replace('_', ' ')} from this paper.
     def get_progress(self, paper_id: str) -> Dict[str, int]:
         """Get current progress for a paper"""
         return self.progress.get(paper_id, {"current": 0, "total": 0})
+
+if __name__ == "__main__":
+    # Create test papers
+    test_papers = {
+        "2310.16834": ArxivPaper(
+            arxiv_id="2310.16834",
+            title="Test Paper 1",
+            abstract="This is a test abstract for paper 1",
+            authors=["Author A", "Author B"],
+            pdf_content="This is the full content of paper 1. It discusses novel methods for AI and presents significant results."
+        ),
+        "2310.16779": ArxivPaper(
+            arxiv_id="2310.16779",
+            title="Test Paper 2",
+            abstract="This is a test abstract for paper 2",
+            authors=["Author C", "Author D"],
+            pdf_content="This paper introduces a new approach to machine learning with practical applications in healthcare."
+        )
+    }
+
+    # Initialize processor
+    qa_processor = QaProcessor()
+
+    # Generate table
+    arxiv_ids = ["2310.16834", "2310.16779"]
+    table = qa_processor.generate_paper_table(arxiv_ids, test_papers)
+
+    # Print results
+    print("Generated Table:")
+    print(table)
+
+    # Save to markdown file
+    with open("test_table.md", "w") as f:
+        f.write("# Test Paper Table\n\n")
+        f.write(table)
