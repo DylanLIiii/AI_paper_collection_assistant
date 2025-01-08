@@ -1,18 +1,16 @@
 import configparser
 from typing import Dict
-import arxiv
 from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper
+from paper_assistant.utils.cache_handler import CacheHandler
 from litellm import completion
 import instructor
 from pydantic import BaseModel
-from markitdown import MarkItDown
 import os
 
 
 class QaResult(BaseModel):
     question: str
     answer: str
-
 
 class QaProcessor:
     def __init__(self, api_key=None):
@@ -28,35 +26,14 @@ class QaProcessor:
         self.client = instructor.from_litellm(completion)
 
         # Load questions
-        with open("configs/questions.txt", "r") as f:
+        with open("configs/prompts/paper_questions.txt", "r") as f:
             self.questions = [line.strip() for line in f.readlines() if line.strip()]
 
         # Progress tracking
         self.progress = {}
 
-        # Initialize cache handler
-        from cache_handler import CacheHandler
 
         self.cache_handler = CacheHandler("out/qa_cache")
-
-    def get_paper_content(self, paper: Paper) -> str:
-        """Get paper content using arxiv API and markitdown"""
-        try:
-            search = arxiv.Search(id_list=[paper.arxiv_id])
-            results = list(arxiv.Client().results(search))
-            if results:
-                paper_entry = next(results)
-                pdf_filename = f"out/pdfs/{paper.arxiv_id}.pdf"
-                os.makedirs("out/pdfs", exist_ok=True)
-                paper_entry.download_pdf(filename=pdf_filename)
-
-                md = MarkItDown()
-                result = md.convert(pdf_filename)
-                return result.text_content
-            return None
-        except Exception as e:
-            print(f"Error getting paper content for {paper.arxiv_id}: {e}")
-            return None
 
     def process_qa(self, paper: Paper, progress_callback=None) -> Dict[str, str]:
         """Process Q&A for a paper with caching"""
@@ -73,7 +50,7 @@ class QaProcessor:
             self.progress[paper_id] = {"current": 0, "total": len(self.questions)}
 
             # Get paper content
-            text_content = self.get_paper_content(paper)
+            text_content = paper.pdf_content
             if not text_content:
                 text_content = paper.abstract
 
