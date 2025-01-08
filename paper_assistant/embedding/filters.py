@@ -1,12 +1,12 @@
-from .paper import Paper
+from .paper import EmbeddingPaper
 from datetime import datetime
-from typing import Callable, List, Optional
+from typing import Callable, List
 
 
 class PaperFilter:
     """A composable filter for Paper objects"""
 
-    def __init__(self, *conditions: Callable[[Paper], bool], operator: str = "AND"):
+    def __init__(self, *conditions: Callable[[EmbeddingPaper], bool], operator: str = "AND"):
         """
         Initialize with one or more filter conditions
 
@@ -20,7 +20,7 @@ class PaperFilter:
         if self.operator not in ["AND", "OR"]:
             raise ValueError("Operator must be 'AND' or 'OR'")
 
-    def __call__(self, paper: Paper) -> bool:
+    def __call__(self, paper: EmbeddingPaper) -> bool:
         """Apply the filter to a paper"""
         if self.operator == "AND":
             return all(cond(paper) for cond in self.conditions)
@@ -41,61 +41,18 @@ def category_filter(categories: List[str]) -> PaperFilter:
     return PaperFilter(lambda p: any(p.is_category(cat) for cat in categories))
 
 
-def date_filter(
-    start_date: Optional[str] = None, end_date: Optional[str] = None
-) -> PaperFilter:
-    """Filter papers by date range"""
-    conditions = []
-
-    if start_date:
-        start = datetime.strptime(start_date, "%Y-%m-%d")
-        conditions.append(lambda p: p.was_updated_after(start))
-
-    if end_date:
-        end = datetime.strptime(end_date, "%Y-%m-%d")
-        conditions.append(lambda p: not p.was_updated_after(end))
-
-    return PaperFilter(*conditions)
+def date_filter(start_date: datetime) -> PaperFilter:
+    """Filter papers by update date (after start_date)"""
+    return PaperFilter(lambda p: p.was_updated_after(start_date))
 
 
-def version_filter(
-    min_version: Optional[int] = None, max_version: Optional[int] = None
-) -> PaperFilter:
-    """Filter papers by version range"""
-    conditions = []
-
-    if min_version is not None:
-        conditions.append(lambda p: p.version >= min_version)
-
-    if max_version is not None:
-        conditions.append(lambda p: p.version <= max_version)
-
-    return PaperFilter(*conditions)
-
-
-def title_contains(text: str, case_sensitive: bool = False) -> PaperFilter:
-    """Filter papers by title containing text"""
-    if not case_sensitive:
-        text = text.lower()
-        return PaperFilter(lambda p: text in p.title.lower())
-    return PaperFilter(lambda p: text in p.title)
-
-
-def has_doi() -> PaperFilter:
-    """Filter papers that have a DOI"""
-    return PaperFilter(lambda p: hasattr(p, "doi") and p.doi)
-
-
-# Common filter combinations
-def recent_papers(days: int = 30) -> PaperFilter:
-    """Filter papers updated in the last N days"""
-    from datetime import timedelta
-
-    cutoff = datetime.now() - timedelta(days=days)
-    return date_filter(cutoff.strftime("%Y-%m-%d"))
-
-
-def popular_categories() -> PaperFilter:
-    """Filter papers in popular categories"""
-    popular = ["cs.CV", "cs.LG", "cs.AI", "cs.CL", "cs.NE"]
-    return category_filter(popular)
+def keyword_filter(keywords: List[str], fields: List[str] = ["title", "abstract"]) -> PaperFilter:
+    """
+    Filter papers by keywords in specified fields.
+    Case-insensitive partial matching.
+    """
+    def check_keywords(paper: EmbeddingPaper) -> bool:
+        text = " ".join(str(getattr(paper, field, "")).lower() for field in fields)
+        return any(kw.lower() in text for kw in keywords)
+    
+    return PaperFilter(check_keywords)

@@ -1,3 +1,4 @@
+
 import configparser
 import json
 from datetime import datetime, timedelta
@@ -6,6 +7,7 @@ from typing import List, Optional
 import re
 import arxiv
 import feedparser
+from loguru import logger
 from paper_assistant.core.base_paper import BasePaper
 
 
@@ -94,16 +96,18 @@ class ArxivPaper(BasePaper):
             url=entry.link
         )
 
+    
 
 def is_earlier(ts1, ts2):
     """Compare two arxiv IDs, returns true if ts1 is older than ts2."""
     return int(ts1.replace(".", "")) < int(ts2.replace(".", ""))
 
 
-def get_papers_from_arxiv_api(area: str, timestamp, last_id) -> List[ArxivPaper]:
+def get_papers_from_arxiv_api(area: str, timestamp, last_id, days=1) -> List[ArxivPaper]:
     """Get papers from ArXiv API that are newer than the last_id."""
+    logger.info(f"Getting papers from ArXiv API for {area}. You can modify the timestamp and days to get papers from the last week or month from the timestamp.")
     end_date = timestamp
-    start_date = timestamp - timedelta(days=1)
+    start_date = timestamp - timedelta(days=days)
     search = arxiv.Search(
         query=f"({area}) AND submittedDate:[{start_date.strftime('%Y%m%d')}* TO {end_date.strftime('%Y%m%d')}*]",
         max_results=None,
@@ -124,6 +128,8 @@ def get_papers_from_arxiv_api(area: str, timestamp, last_id) -> List[ArxivPaper]
 
 def get_papers_from_arxiv_rss(area: str, config: Optional[dict]) -> List[ArxivPaper]:
     """Get papers from ArXiv RSS feed."""
+
+    logger.info(f"Getting papers from ArXiv RSS feed for {area}. This method only get papers from the last day. If you want to get papers from the last week, you should use the API method.")
     # Get feed with timestamp to avoid duplicates
     updated = datetime.utcnow() - timedelta(days=1)
     updated_string = updated.strftime("%a, %d %b %Y %H:%M:%S GMT")

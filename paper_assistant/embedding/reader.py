@@ -1,11 +1,10 @@
 import json
 import os
-from typing import Generator, Callable
+from typing import Generator, Callable, List, Optional
 from tqdm import tqdm
-from .paper import Paper
+from .paper import EmbeddingPaper
 import random
 from loguru import logger
-from typing import List
 from io import StringIO
 
 
@@ -16,25 +15,25 @@ class PaperReader:
         """
         self.file_path = file_path
 
-    def stream_papers(self) -> Generator[Paper, None, None]:
+    def stream_papers(self) -> Generator[EmbeddingPaper, None, None]:
         """
         Stream Paper objects one by one from the JSON file.
         Each line in the file is a complete JSON object.
 
         Returns:
-            Generator[Paper, None, None]: A generator that yields Paper objects.
+            Generator[EmbeddingPaper, None, None]: A generator that yields Paper objects.
         """
         with open(self.file_path, "r") as file:
             for line in file:
                 try:
                     item = json.loads(line.strip())
-                    yield Paper(**item)
+                    yield EmbeddingPaper.from_json(item)
                 except json.JSONDecodeError as e:
                     logger.warning(f"Skipping invalid JSON line: {e}")
 
     def filter(
-        self, paper_filter: Callable[[Paper], bool], limit: int = None
-    ) -> Generator[Paper, None, None]:
+        self, paper_filter: Callable[[EmbeddingPaper], bool], limit: int = None
+    ) -> Generator[EmbeddingPaper, None, None]:
         """
         Filter papers using a PaperFilter or other callable condition.
 
@@ -43,7 +42,7 @@ class PaperReader:
             limit: Maximum number of papers to yield. Defaults to None.
 
         Returns:
-            Generator[Paper, None, None]: A generator that yields filtered Paper objects.
+            Generator[EmbeddingPaper, None, None]: A generator that yields filtered Paper objects.
         """
         count = 0
         for paper in tqdm(self.stream_papers(), desc="Filtering papers", unit="paper"):
@@ -56,8 +55,8 @@ class PaperReader:
     def save_to_json(
         self,
         output_path: str,
-        papers: Generator[Paper, None, None] = None,
-        paper_filter: Callable[[Paper], bool] = None,
+        papers: Generator[EmbeddingPaper, None, None] = None,
+        paper_filter: Callable[[EmbeddingPaper], bool] = None,
         limit: int = None,
         overwrite: bool = False,
     ) -> None:
@@ -130,7 +129,7 @@ class PaperReader:
 
     def stream_batches(
         self, batch_size: int = 32
-    ) -> Generator[List[Paper], None, None]:
+    ) -> Generator[List[EmbeddingPaper], None, None]:
         """
         Stream papers in batches of specified size.
 
@@ -138,7 +137,7 @@ class PaperReader:
             batch_size: Number of papers per batch
 
         Returns:
-            Generator[List[Paper], None, None]: A generator that yields lists of Paper objects
+            Generator[List[EmbeddingPaper], None, None]: A generator that yields lists of Paper objects
         """
         batch = []
         for paper in self.stream_papers():
@@ -149,17 +148,17 @@ class PaperReader:
         if batch:  # Yield any remaining papers
             yield batch
 
-    def sample(self, n: int = 1, buffer_size: int = 10) -> list[Paper]:
+    def sample(self, n: int = 1, buffer_size: int = 10) -> List[EmbeddingPaper]:
         """
         Randomly sample n papers from the dataset using reservoir sampling.
         This method is memory-efficient as it doesn't load the entire dataset into memory.
 
         Args:
             n (int): Number of papers to sample. Defaults to 1.
-            buffer_size (int): Size of the buffer for reservoir sampling. Defaults to 10000.
+            buffer_size (int): Size of the buffer for reservoir sampling. Defaults to 10.
 
         Returns:
-            list[Paper]: List of randomly sampled Paper objects
+            List[EmbeddingPaper]: List of randomly sampled Paper objects
         """
         if n < 1:
             raise ValueError("Sample size must be at least 1")
@@ -187,18 +186,21 @@ class PaperReader:
 
         return reservoir
 
-    def count_papers(self):
-        # This function should be used for counting the number of papers. Only use for a small number of papers.
-        # So we need to check the file size and then use the stream_papers function to count the number of papers.
+    def count_papers(self) -> Optional[int]:
+        """
+        Count the number of papers in the file.
+        Only use for small files (<1GB).
+
+        Returns:
+            Optional[int]: Number of papers or None if file is too large
+        """
         file_size = os.path.getsize(self.file_path)
-        if file_size < 1000000000:
-            count = 0
-            for _ in self.stream_papers():
-                count += 1
+        if file_size < 1_000_000_000:  # 1GB
+            count = sum(1 for _ in self.stream_papers())
             return count
         else:
             logger.error(
-                "File size is too large to count papers. Returning None. Please use the stream_papers function instead."
+                "File size is too large to count papers. Please use stream_papers instead."
             )
             return None
 
