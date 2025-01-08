@@ -1,6 +1,7 @@
 import configparser
-from typing import Dict
+from typing import Dict, List
 from paper_assistant.core.arxiv_scraper import ArxivPaper as Paper
+from paper_assistant.core.arxiv_scraper import get_papers_from_arxiv_api
 from paper_assistant.utils.cache_handler import CacheHandler
 from litellm import completion
 import instructor
@@ -41,7 +42,7 @@ class QaProcessor:
         self.client = instructor.from_litellm(completion)
 
         # Load questions
-        with open("configs/prompts/paper_questions.txt", "r") as f:
+        with open("configs/questions.txt", "r") as f:
             self.questions = [line.strip() for line in f.readlines() if line.strip()]
 
         # Progress tracking
@@ -88,17 +89,16 @@ Extract the {column.replace('_', ' ')} from this paper.
         
         return row
 
-    def generate_paper_table(self, arxiv_ids: List[str], papers: Dict[str, Paper]) -> str:
+    def generate_paper_table(self, papers: Dict[str, Paper]) -> str:
         """Generate a markdown table from multiple papers"""
         # Generate table header
         table = "| " + " | ".join(self.STANDARD_COLUMNS) + " |\n"
         table += "|" + "|".join(["---"] * len(self.STANDARD_COLUMNS)) + "|\n"
         
         # Generate rows
-        for arxiv_id in arxiv_ids:
-            if arxiv_id in papers:
-                row = self.generate_table_row(papers[arxiv_id])
-                table += "| " + " | ".join(
+        for paper in papers:
+            row = self.generate_table_row(paper)
+            table += "| " + " | ".join(
                     str(row.get(col, "")).replace("\n", "<br>") 
                     for col in self.STANDARD_COLUMNS
                 ) + " |\n"
@@ -192,29 +192,16 @@ Extract the {column.replace('_', ' ')} from this paper.
 
 if __name__ == "__main__":
     # Create test papers
-    test_papers = {
-        "2310.16834": ArxivPaper(
-            arxiv_id="2310.16834",
-            title="Test Paper 1",
-            abstract="This is a test abstract for paper 1",
-            authors=["Author A", "Author B"],
-            pdf_content="This is the full content of paper 1. It discusses novel methods for AI and presents significant results."
-        ),
-        "2310.16779": ArxivPaper(
-            arxiv_id="2310.16779",
-            title="Test Paper 2",
-            abstract="This is a test abstract for paper 2",
-            authors=["Author C", "Author D"],
-            pdf_content="This paper introduces a new approach to machine learning with practical applications in healthcare."
-        )
-    }
+    keys_config = configparser.ConfigParser()
+    keys_config.read("configs/keys.ini")
+
+    api_key = keys_config["GEMINI"]["api_key"]
+    test_papers = get_papers_from_arxiv_api(arxiv_ids=["2310.16834", "2310.16779"])
 
     # Initialize processor
-    qa_processor = QaProcessor()
+    qa_processor = QaProcessor(api_key)
 
-    # Generate table
-    arxiv_ids = ["2310.16834", "2310.16779"]
-    table = qa_processor.generate_paper_table(arxiv_ids, test_papers)
+    table = qa_processor.generate_paper_table(test_papers)
 
     # Print results
     print("Generated Table:")
