@@ -12,6 +12,9 @@ class QaResult(BaseModel):
     question: str
     answer: str
 
+class TableQaResult(BaseModel):
+    results: str
+
 class QaProcessor:
     # Define standard columns for the table
     STANDARD_COLUMNS = [
@@ -74,12 +77,12 @@ Extract the {column.replace('_', ' ')} from this paper.
             try:
                 response = self.client.chat.completions.create(
                     model=self.config["SELECTION"]["model"],
-                    response_model=QaResult,
+                    response_model=TableQaResult,
                     messages=[{"role": "user", "content": prompt}],
                     max_retries=3,
                     timeout=30,
                 )
-                row[column] = response.answer
+                row[column] = response.results
             except Exception as e:
                 row[column] = f"Error: {str(e)}"
         
