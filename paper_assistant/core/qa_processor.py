@@ -89,21 +89,13 @@ Extract the {column.replace('_', ' ')} from this paper.
         
         return row
 
-    def generate_paper_table(self, papers: Dict[str, Paper]) -> str:
-        """Generate a markdown table from multiple papers"""
-        # Generate table header
-        table = "| " + " | ".join(self.STANDARD_COLUMNS) + " |\n"
-        table += "|" + "|".join(["---"] * len(self.STANDARD_COLUMNS)) + "|\n"
-        
-        # Generate rows
-        for paper in papers:
+    def generate_paper_table(self, papers: Dict[str, Paper]) -> List[Dict[str, str]]:
+        """Generate table data from multiple papers"""
+        table_data = []
+        for paper in papers.values():
             row = self.generate_table_row(paper)
-            table += "| " + " | ".join(
-                    str(row.get(col, "")).replace("\n", "<br>") 
-                    for col in self.STANDARD_COLUMNS
-                ) + " |\n"
-        
-        return table
+            table_data.append(row)
+        return table_data
 
     def process_qa(self, paper: Paper, progress_callback=None) -> Dict[str, str]:
         """Process Q&A for a paper with caching"""
@@ -201,13 +193,31 @@ if __name__ == "__main__":
     # Initialize processor
     qa_processor = QaProcessor(api_key)
 
-    table = qa_processor.generate_paper_table(test_papers)
-
-    # Print results
-    print("Generated Table:")
-    print(table)
-
-    # Save to markdown file
+    from paper_assistant.utils.table_parser import TableParser
+    
+    # Generate table data
+    table_data = qa_processor.generate_paper_table(test_papers)
+    
+    # Initialize parser
+    parser = TableParser(table_data)
+    
+    # Generate markdown
+    markdown_table = parser.to_markdown()
+    print("Generated Markdown Table:")
+    print(markdown_table)
+    
+    # Save outputs
     with open("test_table.md", "w") as f:
         f.write("# Test Paper Table\n\n")
-        f.write(table)
+        f.write(markdown_table)
+    
+    # Save as Excel
+    parser.to_excel("test_table.xlsx")
+    
+    # Generate HTML
+    parser.to_html("test_table.html", title="Test Paper Summaries")
+    
+    print("\nSaved outputs to:")
+    print("- test_table.md")
+    print("- test_table.xlsx") 
+    print("- test_table.html")
