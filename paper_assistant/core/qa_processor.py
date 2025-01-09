@@ -89,10 +89,10 @@ Extract the {column.replace('_', ' ')} from this paper.
         
         return row
 
-    def generate_paper_table(self, papers: Dict[str, Paper]) -> List[Dict[str, str]]:
+    def generate_paper_table(self, papers: List[Paper]) -> List[Dict[str, str]]:
         """Generate table data from multiple papers"""
         table_data = []
-        for paper in papers.values():
+        for paper in papers:
             row = self.generate_table_row(paper)
             table_data.append(row)
         return table_data
