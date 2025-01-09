@@ -2,8 +2,8 @@ import pandas as pd
 from tabulate import tabulate
 from typing import Dict, List, Union
 from pathlib import Path
-from markdown import markdown
 from bs4 import BeautifulSoup
+from paper_assistant.utils.markdown_processor import MarkdownProcessor
 
 class TableParser:
     """Parser for converting paper summary tables to different formats with enhanced markdown support"""
@@ -17,6 +17,7 @@ class TableParser:
         """
         self.table_data = table_data
         self.columns = list(table_data[0].keys()) if table_data else []
+        self.markdown_processor = MarkdownProcessor()
         
     def to_markdown(self) -> str:
         """Convert table data to markdown format"""
@@ -37,15 +38,8 @@ class TableParser:
         if not content:
             return ""
             
-        # Convert markdown to HTML
-        html = markdown(content, extensions=[
-            'extra',       # For tables, code blocks, etc.
-            'nl2br',       # Convert newlines to <br>
-            'sane_lists',  # Better list handling
-            'fenced_code', # Code blocks
-            'tables',      # Markdown tables
-            'smarty',      # Smart quotes, dashes, etc.
-        ])
+        # Process content through markdown processor
+        html = self.markdown_processor.process_content(content)
         
         # Use BeautifulSoup to clean up and format the HTML
         soup = BeautifulSoup(html, 'html.parser')
@@ -93,6 +87,8 @@ class TableParser:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
+                {self.markdown_processor.get_css()}
+                
                 /* Table styling */
                 table {{
                     width: 100%;

@@ -72,7 +72,13 @@ class QaProcessor:
 
 Extract the {column.replace('_', ' ')} from this paper. 
 - Be concise but informative
-- Use bullet points when appropriate
+- Use markdown formatting:
+  * Use **bold** for important terms
+  * Use *italics* for emphasis
+  * Use bullet points (-) for lists
+  * Use `code` for technical terms
+  * Use $...$ for inline math and $$...$$ for block math
+  * Use \n for line breaks
 - Focus on key information
 """
             try:
