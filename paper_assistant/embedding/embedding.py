@@ -1,11 +1,7 @@
-from datetime import datetime
 import json
-import os
 import torch
 import numpy as np
 from typing import List, Optional
-from sklearn.preprocessing import normalize
-from transformers import AutoModel, AutoTokenizer
 from sentence_transformers import SentenceTransformer
 from .paper import EmbeddingPaper
 from loguru import logger
@@ -56,7 +52,9 @@ class PaperEmbedder:
         """
         self.stop_multi_process_pool()
 
-    def embed_batch(self, papers: List[EmbeddingPaper], is_query: bool = False) -> np.ndarray:
+    def embed_batch(
+        self, papers: List[EmbeddingPaper], is_query: bool = False
+    ) -> np.ndarray:
         """
         Generate embeddings for a batch of papers.
 

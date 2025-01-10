@@ -6,7 +6,9 @@ from typing import Callable, List
 class PaperFilter:
     """A composable filter for Paper objects"""
 
-    def __init__(self, *conditions: Callable[[EmbeddingPaper], bool], operator: str = "AND"):
+    def __init__(
+        self, *conditions: Callable[[EmbeddingPaper], bool], operator: str = "AND"
+    ):
         """
         Initialize with one or more filter conditions
 
@@ -46,13 +48,16 @@ def date_filter(start_date: datetime) -> PaperFilter:
     return PaperFilter(lambda p: p.was_updated_after(start_date))
 
 
-def keyword_filter(keywords: List[str], fields: List[str] = ["title", "abstract"]) -> PaperFilter:
+def keyword_filter(
+    keywords: List[str], fields: List[str] = ["title", "abstract"]
+) -> PaperFilter:
     """
     Filter papers by keywords in specified fields.
     Case-insensitive partial matching.
     """
+
     def check_keywords(paper: EmbeddingPaper) -> bool:
         text = " ".join(str(getattr(paper, field, "")).lower() for field in fields)
         return any(kw.lower() in text for kw in keywords)
-    
+
     return PaperFilter(check_keywords)

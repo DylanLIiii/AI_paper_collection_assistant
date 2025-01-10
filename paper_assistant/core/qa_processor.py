@@ -22,11 +22,13 @@ class QaProcessor:
         "arxiv_id",
         "title",
         "abstract",
-        "key_contributions",
+        # "key_contributions",
         "methodology",
-        "results",
-        "limitations",
-        "practical_applications"
+        # "results",
+        # "limitations",
+        # "practical_applications",
+        "pseudocode_implementation_for_core_method",
+        "a_quick_python_implementation_of_the_core_method"
     ]
     
     def __init__(self, api_key=None):
@@ -47,7 +49,6 @@ class QaProcessor:
 
         # Progress tracking
         self.progress = {}
-
 
         self.cache_handler = CacheHandler("out/qa_cache")
 
@@ -70,16 +71,15 @@ class QaProcessor:
             prompt = f"""Paper Content:
 {text_content[:50000]}
 
-Extract the {column.replace('_', ' ')} from this paper. 
-- Be concise but informative
-- Use markdown formatting:
-  * Use **bold** for important terms
-  * Use *italics* for emphasis
-  * Use bullet points (-) for lists
-  * Use `code` for technical terms
-  * Use $...$ for inline math and $$...$$ for block math
-  * Use \n for line breaks
-- Focus on key information
+Extract, implement, or return the {column.replace('_', ' ')} for this paper. 
+- Be concise but informative.
+- Use markdown formatting.
+    - For code, please use markdown code blocks. 
+    - For Lists, use * for bullet points.
+    - For math, use $...$ for inline math and $$...$$ for block math.
+    - For bold, use **...**.
+    - For italics, use *...*.
+If you are asked to implement a code, please provide the code implementation based on your understanding of the paper.
 """
             try:
                 response = self.client.chat.completions.create(
@@ -189,12 +189,13 @@ Extract the {column.replace('_', ' ')} from this paper.
         return self.progress.get(paper_id, {"current": 0, "total": 0})
 
 if __name__ == "__main__":
+    import numpy as np
     # Create test papers
     keys_config = configparser.ConfigParser()
     keys_config.read("configs/keys.ini")
 
     api_key = keys_config["GEMINI"]["api_key"]
-    test_papers = get_papers_from_arxiv_api(arxiv_ids=["2310.16834", "2310.16779"])
+    test_papers = get_papers_from_arxiv_api(arxiv_ids=["2307.15818"])
 
     # Initialize processor
     qa_processor = QaProcessor(api_key)
@@ -203,6 +204,9 @@ if __name__ == "__main__":
     
     # Generate table data
     table_data = qa_processor.generate_paper_table(test_papers)
+    DEBUG = True
+    if DEBUG:
+        np.save("test_table_data.npy", table_data)
     
     # Initialize parser
     parser = TableParser(table_data)

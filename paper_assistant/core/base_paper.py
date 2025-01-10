@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from loguru import logger
 import os
 import arxiv
@@ -8,15 +8,15 @@ from markitdown import MarkItDown
 
 class BasePaper:
     """Base class for all paper types with common functionality."""
-    
+
     REQUIRED_ATTRIBUTES = {
-        'id': None,  # or arxiv_id
-        'title': None,
-        'abstract': None,
-        'authors': [],
-        'url': None,
+        "id": None,  # or arxiv_id
+        "title": None,
+        "abstract": None,
+        "authors": [],
+        "url": None,
     }
-    
+
     def __init__(self, **kwargs):
         """
         Initialize a paper with dynamic attributes.
@@ -24,10 +24,10 @@ class BasePaper:
         """
         # Private attribute for lazy loading of PDF content
         self._pdf_content = None
-        
+
         # Dynamically assign all attributes
         self._set_attributes(kwargs)
-        
+
         # Validate and ensure basic attributes exist
         self._validate_attributes()
 
@@ -39,10 +39,10 @@ class BasePaper:
     def _validate_attributes(self) -> None:
         """Ensure all required attributes exist with proper defaults."""
         # Handle ID (can be either 'id' or 'arxiv_id')
-        self.id = getattr(self, 'id', None) or getattr(self, 'arxiv_id', None)
-        if hasattr(self, 'arxiv_id'):
+        self.id = getattr(self, "id", None) or getattr(self, "arxiv_id", None)
+        if hasattr(self, "arxiv_id"):
             self.id = self.arxiv_id
-        
+
         # Ensure other required attributes exist
         for attr, default in self.REQUIRED_ATTRIBUTES.items():
             if not hasattr(self, attr) or getattr(self, attr) is None:
@@ -64,41 +64,47 @@ class BasePaper:
         Load PDF content using arxiv API and markitdown.
         Returns None if loading fails.
         """
-        try:
-            # Ensure we have an arxiv ID
-            if not hasattr(self, 'arxiv_id') and not hasattr(self, 'id'):
-                logger.warning("No arxiv_id available to load PDF content")
-                return None
+        # Ensure we have an arxiv ID
+        if not hasattr(self, "arxiv_id") and not hasattr(self, "id"):
+            logger.warning("No arxiv_id available to load PDF content")
+            return None
 
-            arxiv_id = getattr(self, 'arxiv_id', None) or self.id
-            
-            # Create output directory if it doesn't exist
-            # TODO: We should use a better directory to store the PDFs. As temporary solution, we use the output directory
-            pdf_dir = "out/pdfs"
-            os.makedirs(pdf_dir, exist_ok=True)
-            
-            pdf_path = f"{pdf_dir}/{arxiv_id}.pdf"
-            
-            # Download PDF if it doesn't exist
-            if not os.path.exists(pdf_path):
+        arxiv_id = getattr(self, "arxiv_id", None) or self.id
+
+        # Create output directory if it doesn't exist
+        # TODO: We should use a better directory to store the PDFs. As temporary solution, we use the output directory
+        pdf_dir = "out/pdfs"
+        os.makedirs(pdf_dir, exist_ok=True)
+
+        pdf_path = f"{pdf_dir}/{arxiv_id}.pdf"
+
+        # Download PDF if it doesn't exist
+        if not os.path.exists(pdf_path):
+            try:
                 search = arxiv.Search(id_list=[arxiv_id])
-                results = list(arxiv.Client().results(search))
+                results = arxiv.Client().results(search)
                 if not results:
                     logger.warning(f"No results found for arxiv ID {arxiv_id}")
                     return None
-                    
-                paper_entry = next(results)
-                paper_entry.download_pdf(filename=pdf_path)
-            
-            # Convert PDF to text
-            # TODO: We use MarkItDonw as the default PDF to text converter, but it is not very good, we should use a better one
-            md = MarkItDown()
-            result = md.convert(pdf_path)
-            return result.text_content
 
-        except Exception as e:
-            logger.error(f"Error loading PDF content for paper {self.id}: {e}")
-            return None
+                paper_entry = next(results)  # Use indexing instead of next() on exhausted iterator
+                paper_entry.download_pdf(filename=pdf_path)
+                
+                # Verify file was downloaded successfully
+                if not os.path.exists(pdf_path):
+                    logger.error(f"Failed to download PDF for arxiv ID {arxiv_id}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"Error downloading PDF for arxiv ID {arxiv_id}: {str(e)}")
+                return None
+
+        # Convert PDF to text
+        # TODO: We use MarkItDonw as the default PDF to text converter, but it is not very good, we should use a better one
+        md = MarkItDown()
+        result = md.convert(pdf_path)
+        return result.text_content
+
 
     def __repr__(self) -> str:
         """Return a readable string representation of the object."""
@@ -124,10 +130,10 @@ class BasePaper:
         result = {}
         for key, value in self.__dict__.items():
             # Skip private attributes and PDF content
-            if key.startswith('_'):
+            if key.startswith("_"):
                 continue
             if isinstance(value, datetime):
                 result[key] = value.isoformat() if value else None
             else:
                 result[key] = value
-        return result 
+        return result

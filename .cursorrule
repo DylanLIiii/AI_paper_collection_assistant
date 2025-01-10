@@ -1,2 +1,3 @@
 - Use loguru for logging. Do not use print statements.
 - Use TypeHinting for all variables and functions.
+- This project use pixi as environment and project manager. For pip install, use 'pixi add <package_name> --pypi' to install the package. For conda install, use 'pixi add <package_name>' to install the package.
