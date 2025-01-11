@@ -81,6 +81,32 @@
             box-shadow: 0 2px 3px var(--box-shadow-color);
         }
         
+        .qa-results-container {
+            margin-top: 1rem;
+        }
+        
+        .qa-results {
+            margin-top: 1rem;
+        }
+        
+        .qa-item {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-left: 3px solid var(--secondary-color);
+            background-color: #f8f9fa;
+        }
+        
+        .qa-item .question {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .qa-item .answer {
+            color: var(--text-color);
+            white-space: pre-wrap;
+        }
+        
         .qa-pair {
             margin-bottom: 1.5rem;
             padding: 0.8rem;
@@ -538,7 +564,12 @@
                     Processing question <span class="current-question">0</span> of <span class="total-questions">7</span>
                 </div>
             </div>
-            <div id="qa-{{ paper.arxiv_id }}" class="qa-content markdown-content" style="display: none;"></div>
+            <div id="qa-{{ paper.arxiv_id }}" class="qa-content markdown-content" style="display: none;">
+                <div class="qa-results-container">
+                    <h3>Q&A Results</h3>
+                    <div class="qa-results"></div>
+                </div>
+            </div>
         </div>
     </div>
     {% endfor %}
