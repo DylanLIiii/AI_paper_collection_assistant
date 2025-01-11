@@ -151,7 +151,7 @@ def serve_command(args):
 
         # Start Flask server
         app = create_app()
-        port = args.port or 5000
+        port = args.port or app.config["PORT"]
         app.run(host="0.0.0.0", port=port, debug=args.debug)
     except Exception as e:
         logger.error(f"Error starting server: {str(e)}")

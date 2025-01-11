@@ -38,6 +38,9 @@ def create_app(template_dir=None, static_dir=None):
         static_folder=str(static_dir or default_static_dir),
     )
 
+    # Set default port from environment variable or use 5000
+    app.config["PORT"] = int(os.getenv("FLASK_PORT", "5000"))
+
     # Enable debug mode based on environment variable
     app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     app.config["TEMPLATES_AUTO_RELOAD"] = True
