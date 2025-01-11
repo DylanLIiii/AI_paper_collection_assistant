@@ -615,10 +615,12 @@
                             
                             const response = await fetch(`/get_qa/${arxivId}`);
                             const data = await response.json();
+                            console.log('QA Response:', data);
                             
                             clearInterval(pollProgress);
                             
                             if (data.error) {
+                                console.error('QA Error:', data.error);
                                 qaContent.innerHTML = `<p class="error">Error: ${data.error}</p>`;
                             } else {
                                 // Preprocess the content
@@ -639,7 +641,7 @@
                             this.textContent = 'Hide Q&A';
                             
                         } catch (error) {
-                            console.error('Error:', error);
+                            console.error('Fetch Error:', error);
                             qaContent.innerHTML = '<p class="error">Error loading Q&A content</p>';
                             progressContainer.style.display = 'none';
                         }
