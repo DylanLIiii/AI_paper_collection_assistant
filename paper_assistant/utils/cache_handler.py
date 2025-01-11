@@ -32,3 +32,23 @@ class CacheHandler:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"Error saving cache for {cache_key}: {e}")
+
+    def get_cached_dates(self):
+        """Get list of available cached dates from output files"""
+        try:
+            dates = []
+            for filename in os.listdir(self.cache_dir):
+                if filename.endswith('_output.json'):
+                    date = filename.replace('_output.json', '')
+                    # Verify it's a valid date format (YYYY-MM-DD)
+                    try:
+                        from datetime import datetime
+                        datetime.strptime(date, '%Y-%m-%d')
+                        dates.append({"date": date})
+                    except ValueError:
+                        continue
+            # Sort dates in reverse chronological order
+            return sorted(dates, key=lambda x: x['date'], reverse=True)
+        except Exception as e:
+            logger.error(f"Error getting cached dates: {e}")
+            return []

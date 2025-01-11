@@ -38,6 +38,9 @@ def create_app(template_dir=None, static_dir=None):
         static_folder=str(static_dir or default_static_dir),
     )
 
+    # Set default port from environment variable or use 5000
+    app.config["PORT"] = int(os.getenv("FLASK_PORT", "5000"))
+
     # Enable debug mode based on environment variable
     app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
     app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -220,7 +223,10 @@ def create_app(template_dir=None, static_dir=None):
     @app.route("/qa_progress/<arxiv_id>")
     def get_qa_progress(arxiv_id):
         """Get the current progress of Q&A generation for a paper"""
-        return jsonify(qa_processor.get_progress(arxiv_id))
+        progress = qa_processor.get_progress(arxiv_id)
+        if not progress:
+            return jsonify({"error": "No progress data found"}), 404
+        return jsonify(progress)
 
     @app.route("/get_qa/<arxiv_id>")
     def get_qa(arxiv_id):
@@ -241,33 +247,47 @@ def create_app(template_dir=None, static_dir=None):
 
             # Load the paper data
             with open(json_file, "r") as f:
-                papers = json.load(f)
+                papers_data = json.load(f)
 
             # Find the paper with matching arxiv_id
             paper = None
-            for p in papers.values():
+            if isinstance(papers_data, dict):
+                papers = papers_data.values()
+            else:
+                papers = papers_data
+
+            for p in papers:
+                if not isinstance(p, dict):
+                    logger.warning(f"Skipping invalid paper entry: {p}")
+                    continue
+
                 paper_arxiv_id = p.get("ARXIVID") or p.get("arxiv_id")
+                if not paper_arxiv_id:
+                    continue
+
                 logger.info(f"Comparing with paper ID: {paper_arxiv_id}")
 
                 # Strip version numbers from arxiv IDs for comparison
-                clean_paper_id = (
-                    paper_arxiv_id.split("v")[0] if paper_arxiv_id else None
-                )
-                clean_input_id = arxiv_id.split("v")[0] if arxiv_id else None
+                clean_paper_id = paper_arxiv_id.split("v")[0]
+                clean_input_id = arxiv_id.split("v")[0]
 
                 if clean_paper_id == clean_input_id:
-                    paper_data = {
-                        "arxiv_id": paper_arxiv_id,
-                        "title": p["title"],
-                        "abstract": p["abstract"],
-                        "authors": p["authors"],
-                        "url": f"https://arxiv.org/abs/{paper_arxiv_id}",
-                        "comment": p.get("COMMENT") or p.get("comment"),
-                        "relevance": p.get("RELEVANCE") or p.get("relevance"),
-                        "novelty": p.get("NOVELTY") or p.get("novelty"),
-                    }
-                    paper = Paper(**paper_data)
-                    break
+                    try:
+                        paper_data = {
+                            "arxiv_id": paper_arxiv_id,
+                            "title": p.get("title", ""),
+                            "abstract": p.get("abstract", ""),
+                            "authors": p.get("authors", []),
+                            "url": f"https://arxiv.org/abs/{paper_arxiv_id}",
+                            "comment": p.get("COMMENT") or p.get("comment", ""),
+                            "relevance": p.get("RELEVANCE") or p.get("relevance", 0),
+                            "novelty": p.get("NOVELTY") or p.get("novelty", 0),
+                        }
+                        paper = Paper(**paper_data)
+                        break
+                    except Exception as e:
+                        logger.error(f"Error creating Paper object: {e}")
+                        continue
 
             if not paper:
                 logger.warning(f"No paper found matching arxiv_id: {arxiv_id}")
@@ -275,14 +295,37 @@ def create_app(template_dir=None, static_dir=None):
 
             # Process Q&A
             qa_results = qa_processor.process_qa(paper)
-
             if "error" in qa_results:
-                return jsonify({"error": qa_results["error"]})
+                return jsonify({"error": qa_results["error"]}), 500
+                
+            # Convert markdown answers to HTML
+            formatted_qa = []
+            if isinstance(qa_results.get("qa_results"), list):
+                # New format (list of dicts)
+                for qa_pair in qa_results["qa_results"]:
+                    formatted_qa.append({
+                        "question": qa_pair["question"],
+                        "answer": md_processor.process_content(qa_pair["answer"])
+                    })
+            else:
+                # Old format (dict)
+                for question, answer in qa_results.get("qa_results", {}).items():
+                    formatted_qa.append({
+                        "question": question,
+                        "answer": md_processor.process_content(answer)
+                    })
+                
+            return jsonify({
+                "paper_id": arxiv_id,
+                "title": paper.title,
+                "qa_results": formatted_qa,
+                "status": "success",
+                "content": "\n\n".join([f"**{qa['question']}**\n\n{qa['answer']}" for qa in formatted_qa])
+            })
 
-            return jsonify(qa_results)
         except Exception as e:
-            logger.error(f"Error in get_qa: {e}")
-            return jsonify({"error": str(e)})
+            logger.error(f"Error in get_qa: {str(e)}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/main_progress")
     def get_main_progress():

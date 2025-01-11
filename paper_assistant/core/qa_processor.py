@@ -43,7 +43,7 @@ class QaProcessor:
             search = arxiv.Search(id_list=[paper.arxiv_id])
             results = list(arxiv.Client().results(search))
             if results:
-                paper_entry = next(results)
+                paper_entry = results[0]
                 pdf_filename = f"out/pdfs/{paper.arxiv_id}.pdf"
                 os.makedirs("out/pdfs", exist_ok=True)
                 paper_entry.download_pdf(filename=pdf_filename)
@@ -60,12 +60,15 @@ class QaProcessor:
         """Process Q&A for a paper with caching"""
         try:
             paper_id = paper.arxiv_id
+            
+            # Add debug logging
+            logger.info(f"Starting QA processing for paper {paper_id}")
 
             # Check cache first
             cached_results = self.cache_handler.get_cached_data(paper_id)
             if cached_results:
                 logger.info(f"Using cached Q&A for paper {paper_id}")
-                return cached_results
+                return {"success": True, "qa_results": cached_results}
 
             # Initialize progress
             self.progress[paper_id] = {"current": 0, "total": len(self.questions)}
@@ -73,6 +76,7 @@ class QaProcessor:
             # Get paper content
             text_content = self.get_paper_content(paper)
             if not text_content:
+                logger.warning(f"No content found for paper {paper_id}, using abstract")
                 text_content = paper.abstract
 
             # Process each question
@@ -127,11 +131,19 @@ class QaProcessor:
 
             # Save results to cache
             self.cache_handler.save_cache_data(paper_id, qa_results)
-
-            return qa_results
+            
+            logger.info(f"Successfully processed QA for paper {paper_id}")
+            return {
+                "success": True,
+                "paper_id": paper_id,
+                "title": paper.title,
+                "qa_results": [
+                    {"question": q, "answer": a} for q, a in qa_results.items()
+                ]
+            }
 
         except Exception as e:
-            logger.error(f"Error processing Q&A for paper {paper.arxiv_id}: {e}")
+            logger.error(f"Error processing Q&A for paper {paper.arxiv_id}: {e}", exc_info=True)
             return {"error": str(e)}
         finally:
             if paper.arxiv_id in self.progress:

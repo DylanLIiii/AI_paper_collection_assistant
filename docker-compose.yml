@@ -1,14 +1,23 @@
-version: '3'
+version: '3.8'
 services:
   arxiv-summarizer:
     build: .
     ports:
       - "8000:8000"
     volumes:
-      - ./paper_assistant/config:/app/paper_assistant/config
-      - ./out:/app/out
+      - paper_data:/app/out
+      - ./paper_assistant/config:/app/paper_assistant/config:ro
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SLACK_KEY=${SLACK_KEY}
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
+      - FLASK_DEBUG=${FLASK_DEBUG:-false}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  paper_data:

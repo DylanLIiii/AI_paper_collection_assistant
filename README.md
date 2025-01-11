@@ -212,7 +212,7 @@ services:
     - The remaining papers are evaluated by an LLM using the prompt in `configs/paper_topics.txt`.
     - The LLM scores papers for relevance and novelty.
 4. **Q&A Generation**: For each selected paper, the script downloads the PDF and generates question-answer pairs using an LLM, based on the questions in `configs/questions.txt`.
-5. **Output**: The selected papers are sorted by their combined scores and output to the specified endpoints (Slack, JSON, Markdown, or web interface).
+5. **Output**: Selected papers are sorted by their combined scores and output to the specified endpoints (Slack, JSON, Markdown, or web interface).
 
 ## Contributing [TODO]
 
