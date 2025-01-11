@@ -247,33 +247,47 @@ def create_app(template_dir=None, static_dir=None):
 
             # Load the paper data
             with open(json_file, "r") as f:
-                papers = json.load(f)
+                papers_data = json.load(f)
 
             # Find the paper with matching arxiv_id
             paper = None
-            for p in papers.values():
+            if isinstance(papers_data, dict):
+                papers = papers_data.values()
+            else:
+                papers = papers_data
+
+            for p in papers:
+                if not isinstance(p, dict):
+                    logger.warning(f"Skipping invalid paper entry: {p}")
+                    continue
+
                 paper_arxiv_id = p.get("ARXIVID") or p.get("arxiv_id")
+                if not paper_arxiv_id:
+                    continue
+
                 logger.info(f"Comparing with paper ID: {paper_arxiv_id}")
 
                 # Strip version numbers from arxiv IDs for comparison
-                clean_paper_id = (
-                    paper_arxiv_id.split("v")[0] if paper_arxiv_id else None
-                )
-                clean_input_id = arxiv_id.split("v")[0] if arxiv_id else None
+                clean_paper_id = paper_arxiv_id.split("v")[0]
+                clean_input_id = arxiv_id.split("v")[0]
 
                 if clean_paper_id == clean_input_id:
-                    paper_data = {
-                        "arxiv_id": paper_arxiv_id,
-                        "title": p["title"],
-                        "abstract": p["abstract"],
-                        "authors": p["authors"],
-                        "url": f"https://arxiv.org/abs/{paper_arxiv_id}",
-                        "comment": p.get("COMMENT") or p.get("comment"),
-                        "relevance": p.get("RELEVANCE") or p.get("relevance"),
-                        "novelty": p.get("NOVELTY") or p.get("novelty"),
-                    }
-                    paper = Paper(**paper_data)
-                    break
+                    try:
+                        paper_data = {
+                            "arxiv_id": paper_arxiv_id,
+                            "title": p.get("title", ""),
+                            "abstract": p.get("abstract", ""),
+                            "authors": p.get("authors", []),
+                            "url": f"https://arxiv.org/abs/{paper_arxiv_id}",
+                            "comment": p.get("COMMENT") or p.get("comment", ""),
+                            "relevance": p.get("RELEVANCE") or p.get("relevance", 0),
+                            "novelty": p.get("NOVELTY") or p.get("novelty", 0),
+                        }
+                        paper = Paper(**paper_data)
+                        break
+                    except Exception as e:
+                        logger.error(f"Error creating Paper object: {e}")
+                        continue
 
             if not paper:
                 logger.warning(f"No paper found matching arxiv_id: {arxiv_id}")
