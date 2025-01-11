@@ -279,13 +279,11 @@ def create_app(template_dir=None, static_dir=None):
             # Process Q&A
             qa_results = qa_processor.process_qa(paper)
 
-            if "error" in qa_results:
-                return jsonify({"error": qa_results["error"]})
+            return jsonify({"content": qa_results})
 
-            return jsonify(qa_results)
         except Exception as e:
-            logger.error(f"Error in get_qa: {e}")
-            return jsonify({"error": str(e)})
+            logger.error(f"Error in get_qa: {str(e)}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/main_progress")
     def get_main_progress():
