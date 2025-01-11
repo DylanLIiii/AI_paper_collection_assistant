@@ -5,22 +5,21 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y \
     cron \
     tzdata \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set timezone to EST
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Install pixi
+RUN curl -fsSL https://pixi.sh/install.sh | bash
+ENV PATH="/root/.pixi/bin:${PATH}"
+
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code
+# Copy project files
 COPY . .
 
 # Create required directories
@@ -36,14 +35,17 @@ ENV FLASK_ENV=production
 # Expose the port the app runs on
 EXPOSE 8000
 
+# Install dependencies using pixi
+RUN pixi install
+
 # Create start script
 RUN echo "#!/bin/bash\n\
 if [ ! -f /app/out/output.json ]; then\n\
     echo 'Running initial paper generation...'\n\
-    python -m paper_assistant.cli.commands generate\n\
+    pixi run python -m paper_assistant.cli.commands generate\n\
 fi\n\
 cron\n\
-gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 'paper_assistant.api.app:create_app()'" > /app/start.sh
+pixi run gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 'paper_assistant.api.app:create_app()'" > /app/start.sh
 
 RUN chmod +x /app/start.sh
 
