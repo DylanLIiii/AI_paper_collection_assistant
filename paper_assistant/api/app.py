@@ -295,16 +295,15 @@ def create_app(template_dir=None, static_dir=None):
 
             # Process Q&A
             qa_results = qa_processor.process_qa(paper)
-
             if "error" in qa_results:
                 return jsonify({"error": qa_results["error"]}), 500
                 
             # Convert markdown answers to HTML
             formatted_qa = []
-            for qa in qa_results.get("qa_results", []):
+            for question, answer in qa_results.get("qa_results").items():
                 formatted_qa.append({
-                    "question": qa["question"],
-                    "answer": md_processor.process_content(qa["answer"])
+                    "question": question,
+                    "answer": md_processor.process_content(answer)
                 })
                 
             return jsonify({
