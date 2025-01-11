@@ -300,17 +300,27 @@ def create_app(template_dir=None, static_dir=None):
                 
             # Convert markdown answers to HTML
             formatted_qa = []
-            for question, answer in qa_results.get("qa_results").items():
-                formatted_qa.append({
-                    "question": question,
-                    "answer": md_processor.process_content(answer)
-                })
+            if isinstance(qa_results.get("qa_results"), list):
+                # New format (list of dicts)
+                for qa_pair in qa_results["qa_results"]:
+                    formatted_qa.append({
+                        "question": qa_pair["question"],
+                        "answer": md_processor.process_content(qa_pair["answer"])
+                    })
+            else:
+                # Old format (dict)
+                for question, answer in qa_results.get("qa_results", {}).items():
+                    formatted_qa.append({
+                        "question": question,
+                        "answer": md_processor.process_content(answer)
+                    })
                 
             return jsonify({
                 "paper_id": arxiv_id,
                 "title": paper.title,
                 "qa_results": formatted_qa,
-                "status": "success"
+                "status": "success",
+                "content": "\n\n".join([f"**{qa['question']}**\n\n{qa['answer']}" for qa in formatted_qa])
             })
 
         except Exception as e:

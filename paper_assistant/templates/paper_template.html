@@ -636,11 +636,15 @@
                                 const progressResponse = await fetch(`/qa_progress/${arxivId}`);
                                 const progressData = await progressResponse.json();
                                 
-                                if (progressData.total > 0) {
+                                if (progressData && progressData.total > 0) {
                                     const percentage = (progressData.current / progressData.total) * 100;
                                     progressFill.style.width = `${percentage}%`;
                                     currentQuestion.textContent = progressData.current;
                                     totalQuestions.textContent = progressData.total;
+                                } else {
+                                    progressFill.style.width = '0%';
+                                    currentQuestion.textContent = '0';
+                                    totalQuestions.textContent = '0';
                                 }
                             }, 1000);
                             
@@ -652,11 +656,26 @@
                             if (data.error) {
                                 qaContent.innerHTML = `<p class="error">Error: ${data.error}</p>`;
                             } else {
-                                // Preprocess the content
-                                const processedContent = preprocessContent(data.content);
+                                // Clear existing content
+                                qaContent.querySelector('.qa-results').innerHTML = '';
                                 
-                                // Convert markdown to HTML
-                                qaContent.innerHTML = marked.parse(processedContent);
+                                // Add each Q&A pair
+                                data.qa_results.forEach(qa => {
+                                    const qaItem = document.createElement('div');
+                                    qaItem.className = 'qa-item';
+                                    
+                                    const question = document.createElement('div');
+                                    question.className = 'question';
+                                    question.textContent = qa.question;
+                                    
+                                    const answer = document.createElement('div');
+                                    answer.className = 'answer';
+                                    answer.innerHTML = marked.parse(qa.answer);
+                                    
+                                    qaItem.appendChild(question);
+                                    qaItem.appendChild(answer);
+                                    qaContent.querySelector('.qa-results').appendChild(qaItem);
+                                });
                                 
                                 // Trigger MathJax to process new content
                                 MathJax.typesetPromise([qaContent]);
