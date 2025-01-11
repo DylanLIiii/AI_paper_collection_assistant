@@ -223,7 +223,10 @@ def create_app(template_dir=None, static_dir=None):
     @app.route("/qa_progress/<arxiv_id>")
     def get_qa_progress(arxiv_id):
         """Get the current progress of Q&A generation for a paper"""
-        return jsonify(qa_processor.get_progress(arxiv_id))
+        progress = qa_processor.get_progress(arxiv_id)
+        if not progress:
+            return jsonify({"error": "No progress data found"}), 404
+        return jsonify(progress)
 
     @app.route("/get_qa/<arxiv_id>")
     def get_qa(arxiv_id):
@@ -279,7 +282,23 @@ def create_app(template_dir=None, static_dir=None):
             # Process Q&A
             qa_results = qa_processor.process_qa(paper)
 
-            return jsonify({"content": qa_results})
+            if "error" in qa_results:
+                return jsonify({"error": qa_results["error"]}), 500
+                
+            # Convert markdown answers to HTML
+            formatted_qa = []
+            for qa in qa_results.get("qa_results", []):
+                formatted_qa.append({
+                    "question": qa["question"],
+                    "answer": md_processor.process_content(qa["answer"])
+                })
+                
+            return jsonify({
+                "paper_id": arxiv_id,
+                "title": paper.title,
+                "qa_results": formatted_qa,
+                "status": "success"
+            })
 
         except Exception as e:
             logger.error(f"Error in get_qa: {str(e)}", exc_info=True)

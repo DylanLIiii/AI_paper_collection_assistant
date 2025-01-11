@@ -133,7 +133,14 @@ class QaProcessor:
             self.cache_handler.save_cache_data(paper_id, qa_results)
             
             logger.info(f"Successfully processed QA for paper {paper_id}")
-            return {"success": True, "qa_results": qa_results}
+            return {
+                "success": True,
+                "paper_id": paper_id,
+                "title": paper.title,
+                "qa_results": [
+                    {"question": q, "answer": a} for q, a in qa_results.items()
+                ]
+            }
 
         except Exception as e:
             logger.error(f"Error processing Q&A for paper {paper.arxiv_id}: {e}", exc_info=True)
